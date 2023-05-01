@@ -64,4 +64,8 @@ Mkfile.old
 dkms.conf
 
 
+# ignore .vscode config folders
+*/.vscode/*
+.vscode/*
+
 
