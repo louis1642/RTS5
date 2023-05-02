@@ -23,8 +23,10 @@ pthread_mutex_t r_mutex; 	// proteggo la recognizer_data_str
 /* Sequence data structure */
 struct seq_str {
 	unsigned int bit[NGENERATORS];	//Data produced by the generators
-};
-static struct seq_str seq_data;
+	// in realtà sarebbe più chiaro dichiarare la mutex nella struct
+	// pthread_mutex_t seq_mutex;
+};		
+static struct seq_str seq_data;		// static: la modifica fatta su un thread viene vista da tutti i thread
 
 // struttura dati condivisa e protetta contentente le variabili "count" e "ok" usate dal recognizer
 struct recognizer_data_str {
@@ -82,6 +84,8 @@ void* rt_generator_thread(void* parameter) {
 		wait_next_activation(th);
 		//accedere alle variabili condivise in mutua esclusione
 		pthread_mutex_lock(&seq_mutex);
+		// se avessi definito la mutex nella struct,
+		// pthread_mutex_lock(&seq_data.mutex);
 		if (seq_data.bit[th->index]) {
 			seq_data.bit[th->index] = 0;
 		} else{ 
@@ -115,6 +119,7 @@ void* rt_recognizer_thread(void* parameter){
 				pthread_mutex_unlock(&r_mutex);
 			}
 		} else {	// non è la sequenza: resetto lo stato
+			// manca la condizione in cui sbaglio ma è uguale a sequence[0] -> r_state = 1
 			r_state = 0;
 		}
 		pthread_mutex_unlock(&seq_mutex);
@@ -179,6 +184,7 @@ int main() {
 	pthread_attr_init(&thread_sch_attrib);
 	pthread_attr_setschedpolicy(&thread_sch_attrib, SCHED_FIFO);
 	pthread_attr_setinheritsched(&thread_sch_attrib, PTHREAD_EXPLICIT_SCHED);
+	// se non setto PTHREAD_EXPLICIT_SCHED i figli prenderanno lo scheduling del padre
 	
 	//Inizializzare i Mutex per le variabili condivise
 	pthread_mutexattr_t mutexattr;
@@ -230,13 +236,6 @@ int main() {
 	pthread_create(&thread_buddy,NULL,nrt_buddy_thread,&th_buddy);
 
 
-
-	// Pulisci gli attributi usati per inizializzare i thread e i seq_mutex
-	pthread_attr_destroy(&thread_sch_attrib);
-	pthread_mutex_destroy(&seq_mutex);
-	pthread_mutex_destroy(&r_mutex);
-	pthread_mutexattr_destroy(&mutexattr);
-	
 	/* Wait user exit commands*/
 	while (1) {
    		if (getchar() == 'q') break;
@@ -248,6 +247,13 @@ int main() {
 	}
 	pthread_kill(thread_recognizer,0);
 	pthread_kill(thread_buddy,0);
+
+	// Pulisci gli attributi usati per inizializzare i thread e i seq_mutex
+	pthread_attr_destroy(&thread_sch_attrib);
+	pthread_mutex_destroy(&seq_mutex);
+	pthread_mutex_destroy(&r_mutex);
+	pthread_mutexattr_destroy(&mutexattr);
+	
 
   	printf("EXIT!\n");
 
