@@ -31,32 +31,30 @@ struct periodic_thread {
 };
  
 /* Queues */
+// sono static così posso usarle in thread diversi
 static mqd_t qd_ps;
 static mqd_t qd_monitor;
 
 /***************************** Functions ************************************/
 
-static inline void timespec_add_us(struct timespec *t, uint64_t d)
-{
+static inline void timespec_add_us(struct timespec *t, uint64_t d) {
     d *= 1000;
     t->tv_nsec += d;
     t->tv_sec += t->tv_nsec / NSEC_PER_SEC;
     t->tv_nsec %= NSEC_PER_SEC;
 }
 
-void wait_next_activation(struct periodic_thread * thd)
-{
+void wait_next_activation(struct periodic_thread * thd) {
     clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &(thd->r), NULL);
     timespec_add_us(&(thd->r), thd->period);
 }
 
-void start_periodic_timer(struct periodic_thread * thd, uint64_t offs)
-{
+void start_periodic_timer(struct periodic_thread * thd, uint64_t offs) {
     clock_gettime(CLOCK_REALTIME, &(thd->r));
     timespec_add_us(&(thd->r), offs);
 }
 
-unsigned long int difference_ns(struct timespec *ts1, struct timespec *ts2){
+unsigned long int difference_ns(struct timespec *ts1, struct timespec *ts2) {
 	long int diff_sec, diff_nsec;
 	diff_sec =(ts1->tv_sec - ts2->tv_sec);
 	diff_nsec = (ts1->tv_nsec - ts2->tv_nsec);
@@ -64,19 +62,17 @@ unsigned long int difference_ns(struct timespec *ts1, struct timespec *ts2){
 }
 
 /* return 1 if t1>t2, 0 otherwise*/
-int compare_time(struct timespec *t1,struct timespec *t2){
-    if(t1->tv_sec > t2->tv_sec){
+int compare_time(struct timespec *t1,struct timespec *t2) {
+    if (t1->tv_sec > t2->tv_sec) {
         return 1;
-    }
-    else if(t1->tv_sec == t2->tv_sec && t1->tv_nsec > t2->tv_nsec){
+    } else if (t1->tv_sec == t2->tv_sec && t1->tv_nsec > t2->tv_nsec) {
         return 1;
-    }
-    else{
+    } else {
         return 0;
     }
 }
 
-void init_periodic_threads(struct periodic_thread *th){
+void init_periodic_threads(struct periodic_thread *th) {
 	int i = 0;
 	// Inizializzo il periodo, il wcet e la priorità dei threads
 	
@@ -109,23 +105,26 @@ void init_periodic_threads(struct periodic_thread *th){
 	}
 }
 
-void busy_sleep(int us){
+void busy_sleep(int us) {
 	int ret=0;
 	struct timespec start;
 	struct timespec end;
 	struct timespec now;
 	
+	// ricorda, il CLOCK_THREAD_CPUTIME_ID è il clock di esecuzione del thread:
+	//  si ferma se il thread viene interrotto
+
 	ret = clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-	if(ret == -1){
+	if(ret == -1) {
 		printf("ERROR: busy_wait %d\n",getpid());
 	}
 	end = start;
 	timespec_add_us(&end,us);
 	
-	//Continua finché END(tempo di fine) è maggiore di now
-	do{
+	//Continua finché END (tempo di fine) è maggiore di now
+	do {
 		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &now);
-	}while(compare_time(&end,&now)); 
+	} while(compare_time(&end,&now)); 
 	
 	/*
 	printf("END BUSY WAIT:\n START\ts:%ld, ns:%ld \n NOW\ts:%ld, ns:%ld \n END\ts:%ld, ns:%ld \n"	  //DEBUG
@@ -165,7 +164,8 @@ void* ps(void* parameter){
 	attr.mq_msgsize = MAX_MSG_SIZE; 
 	attr.mq_curmsgs = 0;
 	
-	// Apriamo una coda in sola lettura (O_RDONLY), se non esiste la creiamo (O_CREAT). Inoltre la coda sarà non bloccante (O_NONBLOCK)
+	// Apriamo una coda in sola lettura (O_RDONLY), se non esiste la creiamo (O_CREAT).
+	// Inoltre la coda sarà non bloccante (O_NONBLOCK)
 	// La coda riceverà le richieste aperiodiche
 	if ((qd_ps = mq_open (PS_QUEUE_NAME, O_RDONLY | O_CREAT | O_NONBLOCK, QUEUE_PERMISSIONS, &attr)) == -1) {
 		perror ("Server: mq_open (server)");
@@ -185,8 +185,7 @@ void* ps(void* parameter){
 		
 		if (mq_receive(qd_ps, in_buffer,MAX_MSG_SIZE,NULL) == -1){
 			//printf ("No message ...\n");							//DEBUG
-		}
-		else{
+		} else {
 			//printf ("Polling Server: message received: %s.\n",in_buffer);			//DEBUG
 			aperiodic_fun(th->wcet,&qd_monitor,message,th->priority);
 		}
@@ -201,13 +200,13 @@ void* periodic_fun(void* parameter){
 	while (1) {
 		wait_next_activation(th);
 		printf("[%d] Thread with period:%d\t priority:%d\t wcet:%d\n",th->index,th->period,th->priority,th->wcet);		//DEBUG
-		busy_sleep(th->wcet);
+		busy_sleep(th->wcet);		// durante lo sleep deve usare CPU
 	}
 }
 
 
 
-int main(void){
+int main(void) {
 	int i = 0;
 	
 	/* Threads */
@@ -217,7 +216,7 @@ int main(void){
 	pthread_attr_t myattr;
 	struct sched_param myparam;
 	
-	init_periodic_threads(th);
+	init_periodic_threads(th);	// prende in ingresso l'intero vettore
 	
 	pthread_attr_init(&myattr);
 	pthread_attr_setschedpolicy(&myattr, SCHED_FIFO);

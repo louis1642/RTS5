@@ -11,7 +11,7 @@
 #define PS_QUEUE_NAME   "/ps_queue"
 
 
-int main(void){
+int main(void) {
 	int start = 1;
 	
 	// Setto la priorità e lo scheduler del processo
@@ -25,13 +25,14 @@ int main(void){
 	char message[64];
 	sprintf (message, "message from: %d", getpid ());
 	
-	// Apriamo una coda in sola scrittura (O_WRONLY), la coda dovrebbe essere già stata creata dal server. La coda serve ad inviare messaggi al server.
+	// Apriamo una coda in sola scrittura (O_WRONLY), la coda dovrebbe essere già stata creata dal server.
+	// La coda serve ad inviare messaggi al server.
 	if ((qd_ps = mq_open (PS_QUEUE_NAME, O_WRONLY)) == -1) {
 		perror ("Client: mq_open (server)");
 		exit (1);
 	}
 	
-	do{
+	do {
 		printf("which will it be?\n");
 		printf("0.exit\n");
 		printf("1.start aperiodic request\n");
@@ -43,12 +44,11 @@ int main(void){
 			if (mq_send (qd_ps, message, strlen(message) + 1, 0) == -1) {
         			perror ("async_request: Not able to send message to ps");
 			}
-		}
-		else{
+		} else{
 			start = 0; 		
 		}
 
-	}while(start);
+	} while(start);
 	
 	/* Clear */
 	if (mq_close (qd_ps) == -1) {
