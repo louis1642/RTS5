@@ -1,0 +1,7 @@
+se una ruota si blocca, entrambi i freni vanno rilasciati
+
+attenzione al clock che usiamo in clock_gettime() quando misuriamo il WCET
+il WCET è il WORST case execution time, quando lo aggiorniamo dobbiamo effettuare un'operazione di max
+
+
+se facciamo i due controlli in due sorgenti, dobbiamo fare due strutture diag e due PS
