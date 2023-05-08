@@ -51,16 +51,14 @@ void * acquire_filter_loop(void * par) {
 	}
 	unsigned int sum = 0;
 	int cnt = BUF_SIZE;
-	while (keep_on_running)
-	{
+	while (keep_on_running) {
 		wait_next_activation(th);
 
 		// PRELIEVO DATI dalla coda del PLANT
-		if (mq_receive(sensor_qd, message,MAX_MSG_SIZE,NULL) == -1){
+		if (mq_receive(sensor_qd, message,MAX_MSG_SIZE,NULL) == -1) {
 			perror ("acquire filter loop: mq_receive (actuator)");	
 			break;						//DEBUG
-		}
-		else{ 
+		} else{ 
 			buffer[head] = atoi(message);	// atoi() convert a string to integer
 			sum += buffer[head];
 			head = (head+1)%BUF_SIZE;
@@ -119,8 +117,7 @@ void * control_loop(void * par) {
 	unsigned int plant_state = 0;	// conserva il valore del sensore
 	int error = 0;
 	unsigned int control_action = 0;
-	while (keep_on_running)
-	{
+	while (keep_on_running) {
 		wait_next_activation(th);
 
 		// legge il plant state 
@@ -131,8 +128,7 @@ void * control_loop(void * par) {
 		// riceve la reference (in modo non bloccante)
 		if (mq_receive(reference_qd, message,MAX_MSG_SIZE,NULL) == -1){
 			//printf ("No reference ...\n");	//DEBUG
-		}
-		else{
+		} else{
 			//printf ("Reference received: %s.\n",message);			//DEBUG
 			reference = atoi(message);
 		}
@@ -143,9 +139,13 @@ void * control_loop(void * par) {
 			 control_action = 4;
 		} else { // calcolo della legge di controllo
 			error = reference - plant_state;
-			if (error > 0) control_action = 1;
-			else if (error < 0) control_action = 2;
-			else control_action = 3;
+			if (error > 0) {
+				control_action = 1;
+			} else if (error < 0) {
+				control_action = 2;
+			} else {
+				control_action = 3;
+			}
 		}
 		
 		// aggiorna la control action
@@ -155,8 +155,8 @@ void * control_loop(void * par) {
 	}
 	/* Clear */
     if (mq_close (reference_qd) == -1) {
-        perror ("control loop: mq_close reference_qd");
-        exit (1);
+        perror("control loop: mq_close reference_qd");
+        exit(1);
     }
 	return 0;
 }
@@ -179,15 +179,14 @@ void * actuator_loop(void * par) {
 	
 	// Apriamo la coda actuator del plant in scrittura 
 	mqd_t actuator_qd;
-	if ((actuator_qd = mq_open (ACTUATOR_QUEUE_NAME, O_WRONLY|O_CREAT, QUEUE_PERMISSIONS,&attr)) == -1) {
+	if ((actuator_qd = mq_open(ACTUATOR_QUEUE_NAME, O_WRONLY|O_CREAT, QUEUE_PERMISSIONS,&attr)) == -1) {
 		perror ("actuator  loop: mq_open (actuator)");
 		exit (1);
 	}	
 
 	unsigned int control_action = 0;	// la control action è salvata in locale
 	unsigned int control = 0;
-	while (keep_on_running)
-	{
+	while (keep_on_running) {
 		wait_next_activation(th);
 		// prelievo della control action
 		pthread_mutex_lock(&shared_control.lock);
