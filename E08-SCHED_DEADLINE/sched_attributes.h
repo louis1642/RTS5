@@ -32,10 +32,10 @@
 static volatile int done;
 
 struct sched_attr {
-    __u32 size;
+    __u32 size;         // unsigned int 32 bit
 
     __u32 sched_policy;
-    __u64 sched_flags;
+    __u64 sched_flags;  // unsigned int 64 bit
 
     /* SCHED_NORMAL, SCHED_BATCH */
     __s32 sched_nice;
@@ -49,6 +49,9 @@ struct sched_attr {
     __u64 sched_period;
 };
 
+
+// wrapper della system call
+// il NR dipende dall'architettura -> vedi define sopra
 int sched_setattr(pid_t pid,
         const struct sched_attr *attr,
         unsigned int flags)

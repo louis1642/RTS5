@@ -60,6 +60,9 @@ int main()
 	attr.sched_period = 5 * 1000 * 1000; //ns
 	sched_setattr(0, &attr, 0);
 
+    // questa gestione degli attributi va fatta dentro ogni implementazione di thread, se voglio usare 
+    //  un server (?) per ogni thread
+
     start_periodic_timer(2000000, 5000);
     
     while(1) {
