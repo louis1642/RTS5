@@ -1,4 +1,9 @@
-//------------------- PLANT.C ---------------------- 
+//------------------- PLANTR.C ---------------------- 
+
+/* affinity non settata: la macchina è un oggetto fisico,
+ * non una simulazione, pertanto non ha senso che sia "prevedibile"
+ * come i thread del controllore.
+ */
 
 #include <time.h>
 #include <pthread.h>
@@ -48,8 +53,8 @@ void * plant_loop(void * par) {
 		pthread_mutex_unlock(&shared_sensor.lock);
 
 		// se non in sbandata, ogni 1-10 step decrementa la velocità
-		if (count%when_to_decrease==0 && !skate) {
-			if (sensor>0) {
+		if (count%when_to_decrease == 0 && !skate) {
+			if (sensor > 0) {
 				sensor--; // il dato scende in maniera non lineare...
 			}
 			when_to_decrease = 1 + (int)( 10.0 * rand() / ( RAND_MAX + 1.0 ));
@@ -59,7 +64,7 @@ void * plant_loop(void * par) {
 		// aggiunge rumore tra -1 e 1	
 		if (count%3 == 0 && !skate) {
 			noise = -1 + (int)(3.0 * rand() / ( RAND_MAX + 1.0 ));
-			if (sensor>0) {
+			if (sensor > 0) {
 				sensor += noise;
 			}
 		}
@@ -82,19 +87,19 @@ void * plant_loop(void * par) {
 				// emula frenata e skating
 				brake++;
 				if (brake < 10) { // all'inizio la frenata funziona
-					if (sensor>2) {
+					if (sensor > 2) {
 						// per i primi 10 step, decrementa la velocità di 3 (frenata veloce)
-						sensor-=3;
+						sensor -= 3;
 					} else {
-						sensor=0;
+						sensor = 0;
 					}
 				} else { //dopo, inizia lo skating, con probabilità 9/10
 					skate = (int)( 10.0 * rand() / ( RAND_MAX + 1.0 ))>=2;
 					if (!skate) { 	// se non sono in skate, freno bene
-						if (sensor>2) {
-							sensor-=3; 
+						if (sensor > 2) {
+							sensor -= 3; 
 						} else {
-							sensor=0;
+							sensor = 0;
 						}
 					}
 				}
@@ -113,10 +118,10 @@ void * plant_loop(void * par) {
 // legge il valore del sensore di velocità dalla memoria condivisa e lo scrive sulla coda
 void * sensor_driver_loop(void* par) {
 	periodic_thread *th = (periodic_thread *) par;
-	start_periodic_timer(th,TICK_TIME);
+	start_periodic_timer(th, TICK_TIME);
 
 	// Messaggio da inviare al controller
-	char message [MAX_MSG_SIZE];
+	char message[MAX_MSG_SIZE];
 		
 	/* Coda */
 	struct mq_attr attr;
@@ -129,7 +134,7 @@ void * sensor_driver_loop(void* par) {
 	// Apriamo una coda in sola scrittura (O_WRONLY), se non esiste la creiamo (O_CREAT)
 	// La coda conterrà lo stato del plant
 	mqd_t sensor_qd;
-	if ((sensor_qd = mq_open (SENSOR_QUEUE_NAME, O_WRONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) {
+	if ((sensor_qd = mq_open(SENSOR_R_QUEUE_NAME, O_WRONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) {
 		perror("Sensor driver loop: mq_open (sensor)");
 		exit(1);
 	}
@@ -140,10 +145,10 @@ void * sensor_driver_loop(void* par) {
 		value = shared_sensor.value;
 		pthread_mutex_unlock(&shared_sensor.lock);
 
-		printf("Sensor: %d\n",value);	//DEBUG
+		printf("Sensor R: %d\n",value);	//DEBUG
 
 		sprintf(message, "%d", value);
-		if (mq_send(sensor_qd, message, strlen (message) + 1, 0) == -1) {
+		if (mq_send(sensor_qd, message, strlen(message) + 1, 0) == -1) {
 		    perror("Sensor driver: Not able to send message to controller");
 		    continue;
 		}
@@ -162,7 +167,7 @@ void * sensor_driver_loop(void* par) {
 // riceve il comando di controllo sulla coda e lo scrive nella struttura dati shared_actuator
 void * actuator_driver_loop(void* par) {
 	// Messaggio ricevuto dal controller
-	char message [MAX_MSG_SIZE];
+	char message[MAX_MSG_SIZE];
 		
 	/* Coda */
 	struct mq_attr attr;
@@ -175,7 +180,7 @@ void * actuator_driver_loop(void* par) {
 	// Apriamo una coda in sola lettura (O_RDONLY), se non esiste la creiamo (O_CREAT)
 	// La coda conterrà il segnale di controllo
 	mqd_t actuator_qd;
-	if ((actuator_qd = mq_open(ACTUATOR_QUEUE_NAME, O_RDONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) {
+	if ((actuator_qd = mq_open(ACTUATOR_R_QUEUE_NAME, O_RDONLY | O_CREAT, QUEUE_PERMISSIONS, &attr)) == -1) {
 		perror("Actuator driver loop: mq_open (actuator)");
 		exit(1);
 	}
@@ -203,7 +208,7 @@ void * actuator_driver_loop(void* par) {
 }
 
 int main(void) {
-	printf("The plant STARTED!\n");
+	printf("The plant R STARTED!\n");
 
 	pthread_t plant_thread;
 	pthread_t sensor_driver_thread;
@@ -226,7 +231,7 @@ int main(void) {
 
 	myparam.sched_priority = plant_th.priority;
 	pthread_attr_setschedparam(&myattr, &myparam); 
-	pthread_create(&plant_thread,&myattr,plant_loop,(void*)&plant_th);
+	pthread_create(&plant_thread, &myattr, plant_loop, ( void*)&plant_th);
 
 	// SENSOR DRIVER THREAD
 	periodic_thread sensor_th;
@@ -235,12 +240,12 @@ int main(void) {
 
 	myparam.sched_priority = sensor_th.priority;
 	pthread_attr_setschedparam(&myattr, &myparam); 
-	pthread_create(&sensor_driver_thread,&myattr,sensor_driver_loop,(void*)&sensor_th);
+	pthread_create(&sensor_driver_thread, &myattr, sensor_driver_loop, (void*)&sensor_th);
 
 	// ACTUATOR DRIVER THREAD
 	myparam.sched_priority = 51;
 	pthread_attr_setschedparam(&myattr, &myparam); 
-	pthread_create(&actuator_driver_thread,&myattr,actuator_driver_loop,NULL);
+	pthread_create(&actuator_driver_thread, &myattr, actuator_driver_loop, NULL);
 
 	pthread_attr_destroy(&myattr);
 	
@@ -253,17 +258,17 @@ int main(void) {
 	// segnala a tutti i thread di interrompere la loro attività
 	keep_on_running = 0;
 
-	if (mq_unlink (SENSOR_QUEUE_NAME) == -1) {
+	if (mq_unlink (SENSOR_R_QUEUE_NAME) == -1) {
         perror("Main: mq_unlink sensor queue");
         exit(1);
     }
 
-	if (mq_unlink (ACTUATOR_QUEUE_NAME) == -1) {
+	if (mq_unlink (ACTUATOR_R_QUEUE_NAME) == -1) {
         perror("Main: mq_unlink actuator queue");
         exit(1);
     }
 
- 	printf("The plant STOPPED\n");
+ 	printf("The plant R STOPPED\n");
 	return 0;
 }
 

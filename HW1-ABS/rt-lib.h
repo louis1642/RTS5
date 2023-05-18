@@ -1,3 +1,5 @@
+//------------------- RT-LIB.H ---------------------- 
+
 #ifndef __RTLIB
 #define __RTLIB
 #include <time.h>
@@ -27,5 +29,8 @@ void busy_sleep(int us);
 void wait_next_activation(periodic_thread * thd);
 
 void start_periodic_timer(periodic_thread * thd, unsigned long offs);
+
+/* calcolo del massimo tra due unsigned long int */
+unsigned long int max(unsigned long int x, unsigned long int y);
 
 #endif

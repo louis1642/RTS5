@@ -1,3 +1,5 @@
+//------------------- RT-LIB.C ---------------------- 
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <unistd.h>
@@ -67,3 +69,10 @@ void busy_sleep(int us){
 	*/
 }
 
+unsigned long int max(unsigned long int x, unsigned long int y) {
+	if (x > y) {
+		return x;
+	} else {
+		return y;
+	}
+}

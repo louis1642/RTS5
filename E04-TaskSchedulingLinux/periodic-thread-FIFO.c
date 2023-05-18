@@ -1,4 +1,5 @@
 #define	_GNU_SOURCE	//per settare affinity (su quale CPU eseguono i thread)
+// la define è la prima cosa da fare, prima ancora degli #include
 #include <sys/time.h>
 #include <time.h>
 #include <stdint.h>
